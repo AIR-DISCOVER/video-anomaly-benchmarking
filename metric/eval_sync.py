@@ -11,6 +11,7 @@ train_id_in = 0
 train_id_out = 1
 anomaly_id = 254
 ignore_id = 255
+inv_score = False
 
 
 def extract_single(eval_pair):
@@ -20,6 +21,8 @@ def extract_single(eval_pair):
     # Load pred npy
     assert os.path.exists(pred_path)
     pred = np.load(pred_path)
+    if inv_score:
+        pred = - pred
     
     # Load gt anno
     assert os.path.exists(label_path)
@@ -37,8 +40,8 @@ def extract_single(eval_pair):
     converted_gt[gt == anomaly_id] = train_id_out
     converted_gt[gt == ignore_id] = ignore_id  # ignored label
     
-    out_scores = pred[gt == train_id_out]
-    in_scores = pred[gt == train_id_in]
+    out_scores = pred[converted_gt == train_id_out]
+    in_scores = pred[converted_gt == train_id_in]
     
     if (len(out_scores) != 0) and (len(in_scores) != 0):
         auroc, aupr, fpr = get_measures(out_scores, in_scores)
@@ -65,8 +68,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--eval_helper", type=str, required=True, help="Path to eval_helper.json")
     parser.add_argument("--pred_list", type=str, required=True, help="A path to file. Each line is a path to a prediction file, with order corresponding to that of val.csv of dataset.")
+    parser.add_argument("--inv_anomaly_score", action='store_true', help="Normally, predicted logits for anomaly objects should be larger than those in-distribution pixels. If this flag is set, we will take the negative value of the logits for evaluation.")
     parser.add_argument("--num_cpus", type=int, default=16)
     opt = parser.parse_args()
+    
+    if opt.inv_anomaly_score:
+        inv_score = True
     
     # construct eval pairs using eval_helper
     eval_pairs = []  # List of (pred, label)

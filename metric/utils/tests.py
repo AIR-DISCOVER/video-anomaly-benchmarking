@@ -35,6 +35,8 @@ if __name__ == "__main__":
     converted_gt[gt == 254] = train_id_out
     converted_gt[gt == ignore_id] = ignore_id  # ignored label
     
-    auroc, aupr, fpr = get_measures(pred[gt == train_id_out], pred[gt == train_id_in])
+    import IPython; IPython.embed()
+    
+    auroc, aupr, fpr = get_measures(pred[converted_gt == train_id_out], pred[converted_gt == train_id_in])
 
     print(auroc, aupr, fpr)

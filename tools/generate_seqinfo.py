@@ -6,6 +6,7 @@ Output eval_helper.json
 import os
 import argparse
 import json
+import re
 
 
 class ImageLabelPair:
@@ -13,9 +14,34 @@ class ImageLabelPair:
         # Example: train/seq05-2/rgb_v/157.png,train/seq05-2/mask_id_v/157.png
         image, label = image_pair.split(",")
         self.image_path = os.path.join(dataset_root, image)
+        self.depth_path = self.image_path.replace('rgb_v', 'depth_v')
         self.label_path = os.path.join(dataset_root, label)
         self.global_idx = global_idx
+        
+        # Line k:
+        # k: Transform(Location(x=182.332687, y=52.207020, z=1.806737), Rotation(pitch=0.273139, yaw=-0.060333, roll=-0.000549))
+        extrinsics_filepath = os.path.join(os.path.dirname(os.path.dirname(self.image_path)), "path.txt")
+        
+        # extract k-th line of path.txt
+        with open(extrinsics_filepath, 'r') as f:
+            extrinsics_line = f.readlines()[self.get_seq_idx() - 1].strip()
+        
+        # include k in extraction pattern for verification
+        # note for the negative sign when extracting elements
+        pattern = r"{}: Transform\(Location\(x=(-?\d+\.\d+), y=(-?\d+\.\d+), z=(-?\d+\.\d+)\), Rotation\(pitch=(-?\d+\.\d+), yaw=(-?\d+\.\d+), roll=(-?\d+\.\d+)\)\)".format(self.get_seq_idx())
+        match = re.match(pattern, extrinsics_line)
+        assert match is not None
+        
+        x = float(match.group(1))
+        y = float(match.group(2))
+        z = float(match.group(3))
+        pitch = float(match.group(4))
+        yaw = float(match.group(5))
+        roll = float(match.group(6))
+        self.extrinsics = [x, y, z, pitch, yaw, roll]
+        
         assert os.path.exists(self.image_path)
+        assert os.path.exists(self.depth_path)
         assert os.path.exists(self.label_path)
     
     def get_seq_name(self):
@@ -29,8 +55,10 @@ class ImageLabelPair:
     def to_dict(self):
         return {
             "image_path": self.image_path,
+            "depth_path": self.depth_path,  # used for consistency check
             "label_path": self.label_path,
             "global_idx": self.global_idx,
+            "extrinsics": self.extrinsics,
         }
     
     def __str__(self):
