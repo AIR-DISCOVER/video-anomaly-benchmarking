@@ -76,12 +76,18 @@ def extract_single(eval_pair):
     
     # Calculate prediction consistency between reconstructed_attribute and pred2, using mask
     
-    match_cnt = np.sum((reconstructed_attribute == pred2)[0] & mask)
-    all_cnt = np.sum(mask)
-    return match_cnt / all_cnt
+    reconstructed_attribute = reconstructed_attribute[0]
+    pred2 = pred2[0]
+    
+    I = (reconstructed_attribute & pred2 & mask).sum()
+    U = (mask & (reconstructed_attribute | pred2)).sum()
+    return I / U
+    
     
 
 def extract_batch(eval_pairs, num_cpus=16):
+    # output_list = []
+    # output_list.append(extract_single(eval_pairs[0]))
     output_list = p_map(extract_single, eval_pairs, num_cpus=num_cpus)
     return np.mean(output_list)
 
