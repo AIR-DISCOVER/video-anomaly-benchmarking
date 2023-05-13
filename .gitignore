@@ -3,7 +3,11 @@ eval_helper.json
 eval_filelist.txt
 test_filelist.txt
 eval*.txt
+eval*.csv
+eval*.json
 playground.py
 *.csv
 *.png
 *.obj
+*.log
+eval.sh

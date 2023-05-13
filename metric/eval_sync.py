@@ -96,6 +96,9 @@ if __name__ == "__main__":
             # }
             
             pred_path = pred_list[seq_info['global_idx']]
+            if not os.path.exists(pred_path):
+                pred_path = os.path.join(os.path.dirname(opt.pred_list), pred_path)
+                assert os.path.exists(pred_path)
             label_path = seq_info['label_path']
             assert os.path.exists(pred_path)
             assert os.path.exists(label_path)

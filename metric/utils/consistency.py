@@ -53,7 +53,8 @@ def get_extrinsic_matrix(extrinsic_group):
     R = np.array([
         [Cp * Cy, -Cr * Sy + Sr * Sp * Cy, Sr * Sy + Cr * Sp * Cy],
         [Cp * Sy, Cr * Cy + Sr * Sp * Sy, -Sr * Cy + Cr * Sp * Sy],
-        [-Sp, Sr * Cp, Cr * Cp]
+        [
+            -Sp, Sr * Cp, Cr * Cp]
     ])
     
     return np.concatenate([R, np.array([[x], [y], [z]])], axis=1)
@@ -175,8 +176,24 @@ def project(extrinsic1, depth_path1, attribute1, extrinsic2, depth_path2):
     
     reconstructed_depth = np.zeros((HEIGHT, WIDTH)) + 1000000
     reconstructed_attribute = np.zeros((attribute_keep.shape[0], HEIGHT, WIDTH))
+    reconstructed_already_written = np.zeros((HEIGHT, WIDTH))
     for i in range(img_proj_keep.shape[1]):
         x, y = img_proj_keep[:, i]
+        # use interpolation to fill in the depth map
+        for dx in range(-1, 2):
+            for dy in range(-1, 2):
+                if x + dx < 0 or x + dx >= WIDTH or y + dy < 0 or y + dy >= HEIGHT:
+                    continue
+                candidate_x, candidate_y = int(x + dx), int(y + dy)
+                
+                if reconstructed_already_written[candidate_y, candidate_x] == 0:
+                    reconstructed_depth[candidate_y, candidate_x] = depth_proj_keep[0, i]
+                    reconstructed_attribute[:, candidate_y, candidate_x] = attribute_keep[:, i]
+                else:
+                    reconstructed_depth[candidate_y, candidate_x] = min(reconstructed_depth[candidate_y, candidate_x], depth_proj_keep[0, i])
+                    reconstructed_attribute[:, candidate_y, candidate_x] = (reconstructed_attribute[:, candidate_y, candidate_x] + attribute_keep[:, i]) / 2
+                
+        
         x, y = int(x), int(y)
         reconstructed_depth[y, x] = depth_proj_keep[:, i]
         reconstructed_attribute[:, y, x] = attribute_keep[:, i]
@@ -203,29 +220,29 @@ if __name__ == "__main__":
     parser.add_argument('--depth_path2', type=str, required=True)
     opt = parser.parse_args()
     
-    depth_path = opt.depth_path
-    depth_path2 = opt.depth_path2
+    depth_path = "/data21/tb5zhh/datasets/anomaly_dataset/v5_release/train/seq09-3/depth_v/237.png"
+    depth_path2 = "/data21/tb5zhh/datasets/anomaly_dataset/v5_release/train/seq09-3/depth_v/243.png"
     assert os.path.exists(depth_path), "Depth path does not exist!"
     assert os.path.exists(depth_path2), "Depth path does not exist!"
     
-    rgb_map = np.asarray(Image.open(depth_path.replace("depth", "rgb"))).transpose(2, 0, 1)
+    rgb_map = np.asarray(Image.open("/data21/tb5zhh/datasets/anomaly_dataset/v5_release/train/seq09-3/enhanced_rgb_v/cityscapes/reg-0.3-clip-1000/237.png")).transpose(2, 0, 1)
     
     extrinsic1 = [
-                181.859116,
-                52.206493,
-                1.803655,
-                0.227138,
-                -0.056641,
-                -0.002228
+                179.258392,
+                -364.451996,
+                1.801462,
+                0.03788,
+                0.764788,
+                -0.004883
             ]
     
     extrinsic61 = [
-                185.901871,
-                52.213913,
-                1.803239,
-                0.098833,
-                0.061206,
-                -9.2e-05
+                179.831955,
+                -364.449554,
+                1.800967,
+                0.019186,
+                0.656206,
+                0.000105
             ]
 
     reconstructed_depth, reconstructed_attribute, mask = project(extrinsic1, depth_path, rgb_map, extrinsic61, depth_path2)

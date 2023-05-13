@@ -14,13 +14,15 @@ class ImageLabelPair:
         # Example: train/seq05-2/rgb_v/157.png,train/seq05-2/mask_id_v/157.png
         image, label = image_pair.split(",")
         self.image_path = os.path.join(dataset_root, image)
-        self.depth_path = self.image_path.replace('rgb_v', 'depth_v')
         self.label_path = os.path.join(dataset_root, label)
+        self.depth_path = self.label_path.replace('mask_id_v', 'depth_v')
         self.global_idx = global_idx
         
         # Line k:
         # k: Transform(Location(x=182.332687, y=52.207020, z=1.806737), Rotation(pitch=0.273139, yaw=-0.060333, roll=-0.000549))
         extrinsics_filepath = os.path.join(os.path.dirname(os.path.dirname(self.image_path)), "path.txt")
+        if not os.path.exists(extrinsics_filepath):
+            extrinsics_filepath = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(self.image_path)), "../../path.txt"))
         
         # extract k-th line of path.txt
         with open(extrinsics_filepath, 'r') as f:
@@ -46,7 +48,7 @@ class ImageLabelPair:
     
     def get_seq_name(self):
         # Example: seq05-2
-        return os.path.basename(os.path.dirname(os.path.dirname(self.image_path)))
+        return os.path.basename(os.path.dirname(os.path.dirname(self.label_path)))
 
     def get_seq_idx(self):
         # Example: 157

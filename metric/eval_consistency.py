@@ -75,18 +75,19 @@ def extract_single(eval_pair):
     reconstructed_depth, reconstructed_attribute, mask = proj_1_to_2
     
     # Calculate prediction consistency between reconstructed_attribute and pred2, using mask
-    
     reconstructed_attribute = reconstructed_attribute[0]
     pred2 = pred2[0]
     
-    I = (reconstructed_attribute & pred2 & mask).sum()
-    U = (mask & (reconstructed_attribute | pred2)).sum()
+    # I = (reconstructed_attribute & pred2 & mask).sum()
+    I = np.logical_and(np.logical_and(reconstructed_attribute, pred2), mask).sum()
+    # U = (mask & (reconstructed_attribute | pred2)).sum()
+    U = np.logical_and(mask, np.logical_or(reconstructed_attribute, pred2)).sum()
     return I / U
     
     
 
 def extract_batch(eval_pairs, num_cpus=16):
-    # output_list = []
+    output_list = []
     # output_list.append(extract_single(eval_pairs[0]))
     output_list = p_map(extract_single, eval_pairs, num_cpus=num_cpus)
     return np.mean(output_list)
@@ -129,8 +130,18 @@ if __name__ == "__main__":
             depth2_path = seq2['depth_path']
             extrinsics2 = seq2['extrinsics']
             
-            assert os.path.exists(pred1_path)
-            assert os.path.exists(pred2_path)
+            try:
+                assert os.path.exists(pred1_path)
+            except:
+                pred1_path = os.path.join(os.path.dirname(opt.pred_list), pred1_path)
+                assert os.path.exists(pred1_path)
+                
+            try:
+                assert os.path.exists(pred2_path)
+            except:
+                pred2_path = os.path.join(os.path.dirname(opt.pred_list), pred2_path)
+                assert os.path.exists(pred2_path)
+            
             assert os.path.exists(label1_path)
             assert os.path.exists(label2_path)
             assert os.path.exists(depth1_path)

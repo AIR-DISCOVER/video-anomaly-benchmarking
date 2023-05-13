@@ -7,7 +7,6 @@ from p_tqdm import p_map
 
 from utils.measures import get_measures
 
-num_cpus = 16
 train_id_in = 0
 train_id_out = 1
 anomaly_id = 254
@@ -52,7 +51,7 @@ def extract_single(eval_pair):
     return auroc, aupr, fpr
 
 
-def extract_batch(eval_pairs):
+def extract_batch(eval_pairs, num_cpus=16):
     aurocs, auprs, fprs = [], [], []
     output_list = p_map(extract_single, eval_pairs, num_cpus=num_cpus)
     for output in output_list:
@@ -72,6 +71,7 @@ if __name__ == "__main__":
     parser.add_argument("--pred_list", type=str, required=True, help="A path to file. Each line is a path to a prediction file, with order corresponding to that of val.csv of dataset.")
     parser.add_argument("--inv_anomaly_score", action='store_true', help="Normally, predicted logits for anomaly objects should be larger than those in-distribution pixels. If this flag is set, we will take the negative value of the logits for evaluation.")
     parser.add_argument("--eval_time", type=float, required=True, help="How many seconds it takes to evaluate one image for your method.")
+    parser.add_argument("--num_cpus", type=int, default=16)
     opt = parser.parse_args()
     
     if opt.inv_anomaly_score:
@@ -98,6 +98,9 @@ if __name__ == "__main__":
             # }
             
             pred_path = pred_list[seq_info['global_idx']]
+            if not os.path.exists(pred_path):
+                pred_path = os.path.join(os.path.dirname(opt.pred_list), pred_path)
+                assert os.path.exists(pred_path)
             
             # You should correspond to label X frames later
             # where X = ceil(eval_time / frame_time)
@@ -110,5 +113,5 @@ if __name__ == "__main__":
     
     print("Found {} pairs.".format(len(eval_pairs)))
     
-    auroc, aupr, fpr = extract_batch(eval_pairs)
+    auroc, aupr, fpr = extract_batch(eval_pairs, num_cpus=opt.num_cpus)
     print(f"auroc: {auroc}, aupr: {aupr}, fpr: {fpr}")
